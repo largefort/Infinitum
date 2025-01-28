@@ -1,0 +1,88 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Infinitum: The Haunting of Jafet</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- React 18 Production Scripts - Updated order and versions -->
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.22.17/babel.min.js"></script>
+</head>
+<body>
+  <div id="title-screen" class="screen active">
+    <h1>Infinitum</h1>
+    <h2>The Haunting of Jafet</h2>
+    <div class="game-modes">
+      <button id="singleplayer-btn">Single Player</button>
+      <button id="multiplayer-btn">Multiplayer</button>
+    </div>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="multiplayer-screen" class="screen">
+    <div id="multiplayer-root"></div>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="difficulty-screen" class="screen">
+    <h2>Select Difficulty</h2>
+    <div class="difficulty-options">
+      <button id="veryEasy-btn" class="difficulty-btn">
+        Very Easy
+        <span class="recommendation">(Recommended for new players)</span>
+      </button>
+      <button id="easy-btn" class="difficulty-btn">Easy</button>
+      <button id="normal-btn" class="difficulty-btn">Normal</button>
+      <button id="hard-btn" class="difficulty-btn">Hard</button>
+      <button id="nightmare-btn" class="difficulty-btn">Nightmare</button>
+    </div>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="loading-screen" class="screen">
+    <div class="loading-text">Loading...</div>
+    <div class="progress-bar">
+      <div class="progress"></div>
+    </div>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="game-screen" class="screen">
+    <div id="game-ui">
+      <div class="meter eeriness">
+        <label>Eeriness</label>
+        <div class="bar">
+          <div class="fill"></div>
+        </div>
+      </div>
+      <div class="meter scare">
+        <label>Fear Level</label>
+        <div class="bar">
+          <div class="fill"></div>
+        </div>
+      </div>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="game-over-screen" class="screen">
+    <h2>Game Over</h2>
+    <p>Dreadfet caught you...</p>
+    <button id="retry-btn">Try Again</button>
+    <div class="noise-overlay"></div>
+  </div>
+
+  <div id="jumpscare" class="hidden">
+    <object data="jumpscare.svg" type="image/svg+xml"></object>
+  </div>
+
+  <div id="fear-overlay" class="overlay fear-overlay"></div>
+  <div id="eeriness-overlay" class="overlay eeriness-overlay"></div>
+
+  <!-- Update script order and types -->
+  <script type="module" src="game.js"></script>
+  <script type="text/babel" data-type="module" src="multiplayer.js"></script>
+</body>
+</html>

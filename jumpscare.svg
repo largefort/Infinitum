@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+  <defs>
+    <radialGradient id="face-gradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:#600;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#300;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+  
+  <!-- Face -->
+  <circle cx="250" cy="250" r="200" fill="url(#face-gradient)" />
+  
+  <!-- Eyes -->
+  <ellipse cx="175" cy="200" rx="40" ry="60" fill="#000" />
+  <ellipse cx="325" cy="200" rx="40" ry="60" fill="#000" />
+  
+  <!-- Mouth -->
+  <path d="M150 300 Q250 400 350 300 Q250 450 150 300" fill="#000" />
+  
+  <!-- Animated elements -->
+  <style>
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    circle, ellipse, path {
+      animation: pulse 0.5s infinite;
+      transform-origin: center;
+    }
+  </style>
+</svg>
