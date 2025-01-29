@@ -1,9 +1,24 @@
 import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 import { PointerLockControls } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/controls/PointerLockControls.js';
 import { GLTFLoader } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/loaders/GLTFLoader.js';
+import { EffectComposer } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/ShaderPass.js';
+import { FilmPass } from 'https://cdn.skypack.dev/three@0.132.2/examples/jsm/postprocessing/FilmPass.js';
 
 class Game {
   constructor() {
+    // Initialize velocity vectors first
+    this.currentVelocity = new THREE.Vector3();
+    this.targetVelocity = new THREE.Vector3();
+
+    // Initialize movement flags
+    this.moveForward = false;
+    this.moveBackward = false; 
+    this.moveLeft = false;
+    this.moveRight = false;
+
+    // Keep existing constructor setup
     this.setupScreens();
     this.setupThreeJS();
     this.loadTextures();
@@ -13,50 +28,54 @@ class Game {
     this.generateLevel();
     this.bindEvents();
     
+    // Movement settings
+    this.mouseSensitivity = 0.002;
     this.difficulty = 'normal';
-    
-    // Improved movement settings
     this.moveSpeed = 0.15;
+    this.runSpeed = 0.3;
+    this.isRunning = false;
     
-    // Simplified head bobbing settings for horror feel
-    this.bobSpeed = 0.008; // Slower bob for creepier feel
-    this.bobAmount = 0.15; // Subtle bob amount
+    // Bobbing settings 
+    this.walkBobSpeed = 0.008;
+    this.walkBobAmount = 0.15;
+    this.runBobSpeed = 0.012;
+    this.runBobAmount = 0.25;
     this.bobPhase = 0;
     this.isMoving = false;
     
-    // Remove all tilt-related variables and keep only essential movement settings
-    this.mouseSensitivity = 0.002;
+    // Movement smoothing
+    this.movementSmoothing = 0.15;
+    this.heightSmoothing = 0.2;
+    this.currentHeight = 2;
+    this.targetHeight = 2;
     
-    this.movementSmoothing = 0.1;
-    this.currentVelocity = new THREE.Vector3();
-    this.targetVelocity = new THREE.Vector3();
+    // Additional movement variables
+    this.acceleration = 0.2;
+    this.deceleration = 0.3;
+    this.maxVelocity = new THREE.Vector3(1, 1, 1);
     
-    // Improved difficulty settings with slower enemy speeds but same player speed
-    this.difficultySettings = {
-      veryEasy: { enemySpeed: 0.01, catchDistance: 1.5 },
-      easy: { enemySpeed: 0.02, catchDistance: 1.3 },
-      normal: { enemySpeed: 0.04, catchDistance: 1.0 },
-      hard: { enemySpeed: 0.06, catchDistance: 0.8 },
-      nightmare: { enemySpeed: 0.08, catchDistance: 0.6 }
-    };
-
-    // Performance improvements
-    this.chunkLoadDistance = 1; // Reduced chunk load distance for better performance
+    // Initialize footstep timing
+    this.lastFootstep = 0;
+    this.footstepInterval = 500;
+    this.runningFootstepInterval = 300;
+    
+    // Performance settings
+    this.chunkLoadDistance = 1;
     this.renderer.setPixelRatio(window.devicePixelRatio || 1);
     
-    // Enable shadow mapping with optimized settings
+    // Enable shadow mapping
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
-    // Implement frustum culling
-    this.camera.far = 100; // Reduce far plane for better performance
+    // Camera settings
+    this.camera.far = 100;
     
-    // Add performance monitoring
+    // Performance monitoring
     this.lastTime = performance.now();
     this.frames = 0;
     this.currentFPS = 60;
     
-    // Add event listeners for movement
+    // Movement state
     this.movementActive = false;
     this.movementKeys = {
       KeyW: false,
@@ -69,28 +88,70 @@ class Game {
       ArrowRight: false
     };
     
-    // Add overlay elements
+    // Overlays
     this.fearOverlay = document.getElementById('fear-overlay');
     this.eerinessOverlay = document.getElementById('eeriness-overlay');
     
-    // Initialize multiplayer if needed
-    this.isMultiplayer = false;
-    this.room = null;
-
-    // Bind new events
-    const singleplayerBtn = document.getElementById('singleplayer-btn');
-    const multiplayerBtn = document.getElementById('multiplayer-btn');
-    
-    singleplayerBtn?.addEventListener('click', () => this.startGame(false));
-    multiplayerBtn?.addEventListener('click', () => this.startMultiplayer());
-    
-    // Add save point tracking
+    // Save points
     this.savePoints = new Set();
+    
+    // 3D models
     this.gltfLoader = new GLTFLoader();
     this.typewriterModel = null;
-    
-    // Load 3D models
-    this.loadModels();
+
+    // Initialize difficulty settings
+    this.difficultySettings = {
+      veryEasy: {
+        enemySpeed: 0.05,
+        catchDistance: 2
+      },
+      easy: {
+        enemySpeed: 0.08,
+        catchDistance: 2.5
+      },
+      normal: {
+        enemySpeed: 0.12,
+        catchDistance: 3
+      },
+      hard: {
+        enemySpeed: 0.15,
+        catchDistance: 3.5
+      },
+      nightmare: {
+        enemySpeed: 0.2,
+        catchDistance: 4
+      }
+    };
+
+    // Initialize robust state management for pointer lock
+    this.lockState = {
+      active: false,
+      pending: false,
+      error: null
+    };
+
+    // Enhanced reset function
+    this.resetMovementStates = () => {
+      if (!this.movementKeys) return; // Guard against undefined
+      
+      Object.keys(this.movementKeys).forEach(key => {
+        this.movementKeys[key] = false;
+      });
+      this.moveForward = false;
+      this.moveBackward = false;
+      this.moveLeft = false;
+      this.moveRight = false;
+      if (this.currentVelocity) {
+        this.currentVelocity.set(0, 0, 0);
+      }
+      if (this.targetVelocity) {
+        this.targetVelocity.set(0, 0, 0);
+      }
+    };
+
+    // Enhanced lighting setup
+    this.setupLighting();
+    this.setupPostProcessing();
   }
 
   async loadModels() {
@@ -166,44 +227,80 @@ class Game {
   }
 
   setupPlayer() {
-    this.controls = new PointerLockControls(this.camera, document.body);
-    this.camera.position.y = 2;
+    try {
+      this.controls = new PointerLockControls(this.camera, document.body);
+      this.camera.position.y = 2;
 
-    // Simplified robust pointer lock handling
-    document.addEventListener('mousemove', (event) => {
-      if (!this.controls.isLocked || !this.movementActive) return;
-      this.controls.moveRight(-event.movementX * this.mouseSensitivity);
-      this.controls.moveForward(-event.movementY * this.mouseSensitivity);
-    });
-
-    // Improved pointer lock state management
-    this.controls.addEventListener('lock', () => {
-      this.screens.game.classList.add('playing');
-      this.movementActive = true;
-      if (this.clickToContinue) {
-        this.clickToContinue.style.display = 'none';
-      }
-    });
-
-    this.controls.addEventListener('unlock', () => {
-      // Only handle unlock if we're in the game screen and not in menus
-      if (this.screens.game.classList.contains('active') && !this.isSaveMenuOpen) {
-        this.screens.game.classList.remove('playing');
-        this.movementActive = false;
-        this.resetMovementStates();
-        
-        if (!this.screens.gameOver.classList.contains('active')) {
-          this.showClickToContinue();
+      // Enhanced pointer lock error handling
+      document.addEventListener('pointerlockchange', () => {
+        if (document.pointerLockElement === document.body) {
+          this.lockState.active = true;
+          this.lockState.pending = false;
+          this.lockState.error = null;
+          this.screens.game.classList.add('playing');
+          this.movementActive = true;
+          if (this.clickToContinue) {
+            this.clickToContinue.style.display = 'none';
+          }
+        } else {
+          this.lockState.active = false;
+          this.lockState.pending = false;
+          // Only handle unlock if we're actually in the game
+          if (this.screens.game.classList.contains('active') && !this.isSaveMenuOpen) {
+            this.screens.game.classList.remove('playing');
+            this.movementActive = false;
+            this.resetMovementStates();
+            
+            if (!this.screens.gameOver.classList.contains('active')) {
+              this.showClickToContinue();
+            }
+          }
         }
-      }
-    });
+      });
 
-    // Add focus handling
-    window.addEventListener('blur', () => {
-      if (this.controls.isLocked) {
-        this.controls.unlock();
-      }
-    });
+      document.addEventListener('pointerlockerror', (event) => {
+        this.lockState.error = event;
+        this.lockState.pending = false;
+        this.lockState.active = false;
+        console.error('Pointer lock error:', event);
+        // Attempt recovery
+        setTimeout(() => {
+          this.showClickToContinue();
+        }, 100);
+      });
+
+      // Safer mouse movement handling
+      document.addEventListener('mousemove', (event) => {
+        if (!this.lockState.active || !this.movementActive) return;
+        
+        try {
+          const movementX = event.movementX || 0;
+          const movementY = event.movementY || 0;
+          
+          if (isFinite(movementX) && isFinite(movementY)) {
+            this.controls.moveRight(-movementX * this.mouseSensitivity);
+            this.controls.moveForward(-movementY * this.mouseSensitivity);
+          }
+        } catch (error) {
+          console.error('Error handling mouse movement:', error);
+        }
+      });
+
+      // Handle window blur more gracefully
+      window.addEventListener('blur', () => {
+        try {
+          if (this.lockState.active) {
+            this.controls.unlock();
+          }
+          this.resetMovementStates();
+        } catch (error) {
+          console.error('Error handling window blur:', error);
+        }
+      });
+
+    } catch (error) {
+      console.error('Error setting up player controls:', error);
+    }
   }
 
   setupEnemy() {
@@ -562,43 +659,6 @@ class Game {
     this.switchScreen('difficulty');
   }
 
-  startMultiplayer() {
-    this.isMultiplayer = true;
-    
-    try {
-      this.room = new WebsimSocket();
-      this.switchScreen('multiplayer');
-      
-      this.room.onmessage = (event) => {
-        const data = event.data;
-        switch(data.type) {
-          case "gameStart":
-            this.switchScreen('difficulty');
-            break;
-          case "playerMove":
-            // Handle other player movements
-            if (data.clientId !== this.room.party.client.id) {
-              // Update other player positions
-              // (Add multiplayer player rendering logic here)
-            }
-            break;
-        }
-      };
-
-      // Handle WebSocket errors
-      this.room.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        alert('Failed to connect to multiplayer server. Please try again.');
-        this.switchScreen('title');
-      };
-
-    } catch (error) {
-      console.error('Failed to initialize multiplayer:', error);
-      alert('Failed to initialize multiplayer. Please try again.');
-      this.switchScreen('title');
-    }
-  }
-
   setDifficulty(level) {
     this.difficulty = level;
     this.switchScreen('loading');
@@ -644,9 +704,18 @@ class Game {
     
     this.clickToContinue.style.display = 'block';
     
-    const onClick = () => {
-      if (!this.controls.isLocked && this.screens.game.classList.contains('active')) {
-        this.controls.lock();
+    const onClick = async (event) => {
+      try {
+        event.preventDefault();
+        
+        if (!this.lockState.active && this.screens.game.classList.contains('active')) {
+          this.lockState.pending = true;
+          await this.controls.lock();
+        }
+      } catch (error) {
+        console.error('Error requesting pointer lock:', error);
+        this.lockState.error = error;
+        this.lockState.pending = false;
       }
     };
     
@@ -775,7 +844,12 @@ class Game {
       event.preventDefault();
     }
 
-    // Update movement flags based on key states
+    // Handle sprint key (Shift)
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+      this.isRunning = true;
+    }
+
+    // Update movement flags
     this.moveForward = this.movementKeys.KeyW || this.movementKeys.ArrowUp;
     this.moveBackward = this.movementKeys.KeyS || this.movementKeys.ArrowDown;
     this.moveLeft = this.movementKeys.KeyA || this.movementKeys.ArrowLeft;
@@ -788,11 +862,130 @@ class Game {
       event.preventDefault();
     }
 
-    // Update movement flags based on key states
+    // Handle sprint key release
+    if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') {
+      this.isRunning = false;
+    }
+
+    // Update movement flags
     this.moveForward = this.movementKeys.KeyW || this.movementKeys.ArrowUp;
     this.moveBackward = this.movementKeys.KeyS || this.movementKeys.ArrowDown;
     this.moveLeft = this.movementKeys.KeyA || this.movementKeys.ArrowLeft;
     this.moveRight = this.movementKeys.KeyD || this.movementKeys.ArrowRight;
+  }
+
+  setupLighting() {
+    // Remove previous lights
+    this.scene.remove(...this.scene.children.filter(child => child.isLight));
+    
+    // Add very dim ambient light for base visibility
+    const ambient = new THREE.AmbientLight(0x200000, 0.15);
+    this.scene.add(ambient);
+    
+    // Add eerie red point light that follows player with larger radius
+    this.playerLight = new THREE.PointLight(0xff0000, 1.2, 15);
+    this.playerLight.position.set(0, 2, 0);
+    this.scene.add(this.playerLight);
+    
+    // Add static red spotlights in regular intervals along hallways
+    this.staticLights = [];
+    for (let i = 0; i < 20; i++) {
+      const light = new THREE.SpotLight(0xff0000, 0.8, 20);
+      light.position.set(
+        Math.random() * 60 - 30,
+        4, // Position lights higher
+        Math.random() * 60 - 30
+      );
+      light.target.position.set(
+        light.position.x,
+        0,
+        light.position.z
+      );
+      light.angle = Math.PI / 4;
+      light.penumbra = 0.5;
+      light.decay = 2;
+      this.staticLights.push(light);
+      this.scene.add(light);
+      this.scene.add(light.target);
+    }
+    
+    // Add flickering red point lights with varying intensities
+    this.flickeringLights = [];
+    for (let i = 0; i < 8; i++) {
+      const light = new THREE.PointLight(
+        new THREE.Color(0xff0000).multiplyScalar(0.8 + Math.random() * 0.4),
+        1,
+        12
+      );
+      light.position.set(
+        Math.random() * 40 - 20,
+        2,
+        Math.random() * 40 - 20
+      );
+      light.intensity = 0.5 + Math.random() * 0.5;
+      this.flickeringLights.push(light);
+      this.scene.add(light);
+    }
+
+    // Add subtle pulsing hemisphere light for overall ambiance
+    this.hemisphereLight = new THREE.HemisphereLight(0xff0000, 0x000000, 0.3);
+    this.scene.add(this.hemisphereLight);
+  }
+
+  updateLighting() {
+    // Update player light position
+    this.playerLight.position.copy(this.camera.position);
+    
+    // Update flickering lights
+    this.flickeringLights.forEach(light => {
+      // Create more complex flickering pattern
+      const time = performance.now() * 0.001;
+      light.intensity = 0.5 + 
+        Math.sin(time * 2) * 0.2 +
+        Math.sin(time * 4.5) * 0.1 +
+        Math.cos(time * 3.7) * 0.15;
+    });
+
+    // Subtle pulsing of hemisphere light
+    const time = performance.now() * 0.0005;
+    this.hemisphereLight.intensity = 0.3 + Math.sin(time) * 0.1;
+
+    // Update static lights to create moving shadows
+    this.staticLights.forEach((light, index) => {
+      const time = performance.now() * 0.001 + index;
+      light.intensity = 0.7 + Math.sin(time * 0.5) * 0.3;
+    });
+  }
+
+  setupPostProcessing() {
+    const composer = new EffectComposer(this.renderer);
+    
+    // Render pass
+    const renderPass = new RenderPass(this.scene, this.camera);
+    composer.addPass(renderPass);
+    
+    // Film grain and scanlines with adjusted values
+    const filmPass = new FilmPass(
+      0.35,  // noise intensity
+      0.025,  // scanline intensity
+      648,    // scanline count
+      false   // grayscale
+    );
+    composer.addPass(filmPass);
+    
+    // Enhanced color correction for red atmosphere
+    const effectColor = new ShaderPass(ColorCorrectionShader);
+    effectColor.uniforms['powRGB'].value = new THREE.Vector3(1.2, 0.8, 0.8);
+    effectColor.uniforms['mulRGB'].value = new THREE.Vector3(1.3, 0.7, 0.7);
+    composer.addPass(effectColor);
+    
+    // Stronger vignette effect
+    const vignettePass = new ShaderPass(VignetteShader);
+    vignettePass.uniforms['darkness'].value = 1.8;
+    vignettePass.uniforms['offset'].value = 0.95;
+    composer.addPass(vignettePass);
+
+    this.composer = composer;
   }
 
   updatePlayerPosition() {
@@ -821,16 +1014,18 @@ class Game {
     if (this.moveLeft) moveVector.sub(rightVector);
     if (this.moveRight) moveVector.add(rightVector);
 
-    // Normalize and apply movement speed
+    // Normalize and apply movement speed with acceleration
     if (moveVector.length() > 0) {
       moveVector.normalize();
-      this.targetVelocity.copy(moveVector).multiplyScalar(this.moveSpeed);
+      const currentSpeed = this.isRunning ? this.runSpeed : this.moveSpeed;
+      this.targetVelocity.copy(moveVector).multiplyScalar(currentSpeed);
+      
+      // Apply acceleration
+      this.currentVelocity.lerp(this.targetVelocity, this.acceleration);
     } else {
-      this.targetVelocity.set(0, 0, 0);
+      // Apply deceleration
+      this.currentVelocity.lerp(new THREE.Vector3(0, 0, 0), this.deceleration);
     }
-
-    // Smooth movement transition
-    this.currentVelocity.lerp(this.targetVelocity, this.movementSmoothing);
 
     // Calculate new position
     const newPosition = this.camera.position.clone().add(this.currentVelocity);
@@ -857,30 +1052,38 @@ class Game {
       // Update horizontal position
       this.camera.position.add(this.currentVelocity);
       
-      // Horror-style head bobbing
+      // Enhanced head bobbing
       if (this.isMoving) {
+        // Determine bobbing parameters based on movement state
+        const bobSpeed = this.isRunning ? this.runBobSpeed : this.walkBobSpeed;
+        const bobAmount = this.isRunning ? this.runBobAmount : this.walkBobAmount;
+        
         // Update bob phase
-        this.bobPhase += this.bobSpeed;
+        this.bobPhase += bobSpeed;
         
-        // Calculate vertical bob with a slight forward lean
-        const verticalBob = Math.sin(this.bobPhase) * this.bobAmount;
+        // Calculate vertical bob with slight forward lean
+        const verticalBob = Math.sin(this.bobPhase) * bobAmount;
+        const forwardLean = this.isRunning ? 0.1 : 0.05; // Subtle forward lean
         
-        // Apply vertical bob with smooth transition
-        const targetY = 2 + verticalBob;
-        this.camera.position.y += (targetY - this.camera.position.y) * 0.1;
+        // Calculate target height with bob and lean
+        this.targetHeight = 2 + verticalBob - forwardLean;
+        
+        // Handle footstep timing
+        const currentTime = performance.now();
+        const stepInterval = this.isRunning ? this.runningFootstepInterval : this.footstepInterval;
+        
+        if (currentTime - this.lastFootstep > stepInterval) {
+          this.lastFootstep = currentTime;
+          // Could add footstep sound here if desired
+        }
       } else {
         // Smoothly return to default height when not moving
-        const defaultHeight = 2;
-        this.camera.position.y += (defaultHeight - this.camera.position.y) * 0.1;
+        this.targetHeight = 2;
       }
-    }
-    
-    // Send position update in multiplayer
-    if (this.isMultiplayer && this.room) {
-      this.room.send({
-        type: "playerMove",
-        position: this.camera.position.toArray()
-      });
+      
+      // Smooth height transition
+      this.currentHeight += (this.targetHeight - this.currentHeight) * this.heightSmoothing;
+      this.camera.position.y = this.currentHeight;
     }
   }
 
@@ -913,13 +1116,19 @@ class Game {
   }
 
   triggerJumpscare() {
+    // Immediately stop player movement
+    this.movementActive = false;
+    this.controls.unlock();
+    
+    // Show jumpscare immediately
     this.jumpscare.classList.remove('hidden');
+    
+    // Shorter delay before game over
     setTimeout(() => {
       this.jumpscare.classList.add('hidden');
       this.switchScreen('gameOver');
-      this.controls.unlock();
       this.resetGame();
-    }, 1000);
+    }, 500); // Reduced from 1000ms to 500ms for faster response
   }
 
   resetGame() {
@@ -947,6 +1156,7 @@ class Game {
     if(this.controls.isLocked) {
       this.updatePlayerPosition();
       this.updateEnemy();
+      this.updateLighting();
       
       // Only update chunks every few frames for better performance
       if(this.frames % 3 === 0) {
@@ -954,10 +1164,66 @@ class Game {
       }
     }
     
-    // Optimized rendering with frustum culling
-    this.renderer.render(this.scene, this.camera);
+    // Use composer instead of renderer
+    this.composer.render();
   }
 }
+
+const ColorCorrectionShader = {
+  uniforms: {
+    'tDiffuse': { value: null },
+    'powRGB': { value: new THREE.Vector3(1.2, 0.8, 0.8) },
+    'mulRGB': { value: new THREE.Vector3(1.3, 0.7, 0.7) }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform vec3 powRGB;
+    uniform vec3 mulRGB;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      color.rgb = mulRGB * pow(color.rgb, powRGB);
+      color.rgb = mix(color.rgb, vec3(color.r * 1.2, color.g * 0.8, color.b * 0.8), 0.3);
+      gl_FragColor = color;
+    }
+  `
+};
+
+const VignetteShader = {
+  uniforms: {
+    'tDiffuse': { value: null },
+    'offset': { value: 0.95 },
+    'darkness': { value: 1.8 }
+  },
+  vertexShader: `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float offset;
+    uniform float darkness;
+    varying vec2 vUv;
+    void main() {
+      vec4 color = texture2D(tDiffuse, vUv);
+      vec2 uv = (vUv - 0.5) * 2.0;
+      float vignet = 1.0 - dot(uv, uv) * offset;
+      vignet = pow(vignet, darkness);
+      color.rgb = mix(color.rgb, color.rgb * vec3(1.0, 0.8, 0.8), 0.5) * vignet;
+      gl_FragColor = color;
+    }
+  `
+};
 
 const game = new Game();
 game.animate();

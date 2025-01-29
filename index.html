@@ -4,50 +4,82 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Infinitum: The Haunting of Jafet</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- React 18 Production Scripts - Updated order and versions -->
-  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone@7.22.17/babel.min.js"></script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.132.2/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.132.2/examples/jsm/"
+    }
+  }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+    import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+    import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+    import { FilmPass } from 'three/addons/postprocessing/FilmPass.js';
+    window.THREE = THREE;
+    window.EffectComposer = EffectComposer;
+    window.RenderPass = RenderPass;
+    window.ShaderPass = ShaderPass;
+    window.FilmPass = FilmPass;
+  </script>
 </head>
 <body>
+  <!-- Title Screen -->
   <div id="title-screen" class="screen active">
-    <h1>Infinitum</h1>
-    <h2>The Haunting of Jafet</h2>
-    <div class="game-modes">
-      <button id="singleplayer-btn">Single Player</button>
-      <button id="multiplayer-btn">Multiplayer</button>
+    <div class="title-content">
+      <h1>Infinitum</h1>
+      <h2>The Haunting of Jafet</h2>
+      <div class="game-modes">
+        <button id="start-btn" class="menu-button">
+          Start Game
+        </button>
+      </div>
     </div>
     <div class="noise-overlay"></div>
   </div>
 
-  <div id="multiplayer-screen" class="screen">
-    <div id="multiplayer-root"></div>
-    <div class="noise-overlay"></div>
-  </div>
-
+  <!-- Difficulty Screen -->
   <div id="difficulty-screen" class="screen">
     <h2>Select Difficulty</h2>
     <div class="difficulty-options">
       <button id="veryEasy-btn" class="difficulty-btn">
         Very Easy
-        <span class="recommendation">(Recommended for new players)</span>
+        <span class="recommendation">Perfect for first-time explorers</span>
       </button>
-      <button id="easy-btn" class="difficulty-btn">Easy</button>
-      <button id="normal-btn" class="difficulty-btn">Normal</button>
-      <button id="hard-btn" class="difficulty-btn">Hard</button>
-      <button id="nightmare-btn" class="difficulty-btn">Nightmare</button>
+      <button id="easy-btn" class="difficulty-btn">
+        Easy
+        <span class="recommendation">For a casual haunting experience</span>
+      </button>
+      <button id="normal-btn" class="difficulty-btn">
+        Normal
+        <span class="recommendation">The standard terrifying experience</span>
+      </button>
+      <button id="hard-btn" class="difficulty-btn">
+        Hard
+        <span class="recommendation">For seasoned horror veterans</span>
+      </button>
+      <button id="nightmare-btn" class="difficulty-btn">
+        Nightmare
+        <span class="recommendation">Pure, unrelenting terror</span>
+      </button>
     </div>
     <div class="noise-overlay"></div>
   </div>
 
+  <!-- Loading Screen -->
   <div id="loading-screen" class="screen">
-    <div class="loading-text">Loading...</div>
-    <div class="progress-bar">
-      <div class="progress"></div>
+    <div class="loading-content">
+      <div class="loading-text">Preparing Your Nightmare...</div>
+      <div class="progress-bar">
+        <div class="progress"></div>
+      </div>
     </div>
     <div class="noise-overlay"></div>
   </div>
 
+  <!-- Game Screen -->
   <div id="game-screen" class="screen">
     <div id="game-ui">
       <div class="meter eeriness">
@@ -63,26 +95,33 @@
         </div>
       </div>
     </div>
+    <div class="interaction-prompt">
+      Press E to interact
+    </div>
     <canvas id="game-canvas"></canvas>
     <div class="noise-overlay"></div>
   </div>
 
+  <!-- Game Over Screen -->
   <div id="game-over-screen" class="screen">
-    <h2>Game Over</h2>
-    <p>Dreadfet caught you...</p>
-    <button id="retry-btn">Try Again</button>
+    <div class="game-over-content">
+      <h2>Game Over</h2>
+      <p>The darkness has consumed you...</p>
+      <button id="retry-btn" class="menu-button">Face Your Fears Again</button>
+    </div>
     <div class="noise-overlay"></div>
   </div>
 
+  <!-- Jumpscare -->
   <div id="jumpscare" class="hidden">
     <object data="jumpscare.svg" type="image/svg+xml"></object>
   </div>
 
+  <!-- Overlay Effects -->
   <div id="fear-overlay" class="overlay fear-overlay"></div>
   <div id="eeriness-overlay" class="overlay eeriness-overlay"></div>
 
-  <!-- Update script order and types -->
+  <!-- Scripts -->
   <script type="module" src="game.js"></script>
-  <script type="text/babel" data-type="module" src="multiplayer.js"></script>
 </body>
 </html>
