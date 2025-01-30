@@ -28,7 +28,7 @@ body {
   align-items: center;
   flex-direction: column;
   background: radial-gradient(circle at center, #1a0000, #000000);
-  transition: all 0.5s ease-in-out;
+  transition: opacity 1.5s ease-in-out;
 }
 
 .screen::before {
@@ -61,7 +61,7 @@ body {
 
 .screen.active {
   display: flex;
-  animation: fadeIn 0.5s ease-in-out;
+  animation: dreamFadeIn 2s ease-in-out;
 }
 
 .screen.active::before {
@@ -85,9 +85,18 @@ body {
   transition: none;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@keyframes dreamFadeIn {
+  0% {
+    opacity: 0;
+    filter: blur(10px) brightness(2);
+  }
+  50% {
+    filter: blur(5px) brightness(1.5);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) brightness(1);
+  }
 }
 
 .noise-overlay {
@@ -475,6 +484,72 @@ button:hover::after {
   100% { opacity: 0.3; }
 }
 
+.face-transition {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.face-transition.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.face-transition svg {
+  width: 100%;
+  height: 100%;
+  max-width: 500px;
+  max-height: 500px;
+  animation: faceScaleIn 0.5s ease-in-out;
+}
+
+@keyframes faceScaleIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.title-face {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.8);
+  width: 300px;
+  height: 300px;
+  z-index: -1;
+  opacity: 0.3;
+}
+
+.loading-face {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.6);
+  width: 200px;
+  height: 200px;
+  opacity: 0.2;
+  z-index: -1;
+}
+
 .multiplayer-lobby,
 .multiplayer-error,
 .player-list,
@@ -482,4 +557,238 @@ button:hover::after {
 .player-avatar,
 .start-game-btn {
   display: none;
+}
+
+#stats-container {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border: 2px solid #f00;
+  border-radius: 10px;
+  min-width: 250px;
+  z-index: 100;
+  font-family: 'Courier New', monospace;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+  display: none;
+}
+
+.stat-item {
+  margin-bottom: 15px;
+}
+
+.stat-item:last-child {
+  margin-bottom: 0;
+}
+
+.stat-label {
+  color: #ff6666;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  color: #fff;
+  font-size: 1.1em;
+  text-shadow: 0 0 5px #f00;
+}
+
+#minimap-container {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 200px;
+  height: 200px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid #f00;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.3),
+              inset 0 0 20px rgba(255, 0, 0, 0.2);
+  padding: 5px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+#minimap {
+  border: 1px solid #600;
+  width: 100%;
+  height: 100%;
+  border-radius: 3px;
+  image-rendering: pixelated;
+}
+
+.minimap-player {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 5px #fff;
+}
+
+.minimap-enemy {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #f00;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 5px #f00;
+}
+
+.minimap-wall {
+  position: absolute;
+  background: rgba(255, 0, 0, 0.3);
+}
+
+.horror-message {
+  position: fixed;
+  color: #ff0000;
+  font-family: 'Horror Font', cursive;
+  font-size: 3em;
+  text-shadow: 0 0 10px #f00;
+  opacity: 0;
+  z-index: 1000;
+  pointer-events: none;
+  transform: scale(0.5);
+  transition: all 0.3s ease-out;
+  text-align: center;
+  width: 100%;
+}
+
+.horror-message.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.horror-message.violent {
+  animation: violentShake 0.3s infinite;
+}
+
+@keyframes violentShake {
+  0% { transform: translate(-5px, -5px) rotate(-2deg) scale(1.1); }
+  25% { transform: translate(5px, 5px) rotate(2deg) scale(1.2); }
+  50% { transform: translate(-5px, 5px) rotate(-2deg) scale(1.1); }
+  75% { transform: translate(5px, -5px) rotate(2deg) scale(1.2); }
+  100% { transform: translate(-5px, -5px) rotate(-2deg) scale(1.1); }
+}
+
+.horror-message-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.title-horror-messages {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.title-horror-message {
+  position: absolute;
+  color: #ff0000;
+  font-family: 'Horror Font', cursive;
+  text-shadow: 0 0 10px #f00;
+  opacity: 0;
+  pointer-events: none;
+  animation: titleMessageFade 4s ease-in-out forwards;
+}
+
+@keyframes titleMessageFade {
+  0% { opacity: 0; transform: scale(0.5); }
+  10% { opacity: 1; transform: scale(1); }
+  90% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.5); }
+}
+
+.dream-transition {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 2s ease-in-out;
+  background: radial-gradient(circle at center,
+    rgba(255, 255, 255, 0.8) 0%,
+    rgba(255, 255, 255, 0.5) 30%,
+    rgba(255, 255, 255, 0) 70%
+  );
+  mix-blend-mode: screen;
+}
+
+.dream-transition.active {
+  opacity: 1;
+}
+
+.dream-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 70%
+  );
+  animation: dreamPulse 8s ease-in-out infinite;
+}
+
+@keyframes dreamPulse {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.1; }
+  100% { opacity: 0.3; }
+}
+
+.pause-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.pause-menu-content {
+  background: linear-gradient(to bottom, #300, #100);
+  border: 3px solid #f00;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.pause-menu h2 {
+  margin-bottom: 30px;
+  font-size: 3em;
+  text-shadow: 0 0 10px #f00;
+}
+
+.pause-menu button {
+  display: block;
+  width: 100%;
+  margin: 15px 0;
+  padding: 15px 30px;
+  font-size: 1.4em;
 }
